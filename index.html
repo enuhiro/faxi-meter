@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="FAXI">
+<meta name="theme-color" content="#F5C518">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<title>FAXI METER</title>
+<style>
+  /* ===== BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Arial Black', Arial, sans-serif;
+    background: #000;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100dvh;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background 0.3s;
+  }
+
+  /* ===== THEMES ===== */
+  /* LCD theme */
+  body.theme-lcd {
+    background: #0a0a0a;
+    --fare-color: #ff3c00;
+    --dist-color: #00ff41;
+    --label-color: #888;
+    --panel-bg: #111;
+    --panel-border: #333;
+    --display-bg: #0d1a0d;
+    --display-fare-bg: #1a0500;
+    --btn-ride-bg: #1a6600;
+    --btn-ride-color: #00ff41;
+    --btn-exit-bg: #660000;
+    --btn-exit-color: #ff3c00;
+    --btn-text: #ccc;
+    --lamp-kaiso: #ff4444;
+    --lamp-musha: #ffaa00;
+    --header-bg: #111;
+  }
+  /* Modern theme */
+  body.theme-modern {
+    background: #0f0f1a;
+    --fare-color: #F5C518;
+    --dist-color: #4fc3f7;
+    --label-color: #aaa;
+    --panel-bg: #1a1a2e;
+    --panel-border: #2a2a4a;
+    --display-bg: #12122a;
+    --display-fare-bg: #1a1600;
+    --btn-ride-bg: #1a6e1a;
+    --btn-ride-color: #7fff7f;
+    --btn-exit-bg: #8b0000;
+    --btn-exit-color: #ffaaaa;
+    --btn-text: #ddd;
+    --lamp-kaiso: #ff6b6b;
+    --lamp-musha: #ffd93d;
+    --header-bg: #12122a;
+  }
+  /* Binary theme */
+  body.theme-binary {
+    background: #000a00;
+    --fare-color: #00ff00;
+    --dist-color: #00cc00;
+    --label-color: #005500;
+    --panel-bg: #001a00;
+    --panel-border: #003300;
+    --display-bg: #000d00;
+    --display-fare-bg: #000d00;
+    --btn-ride-bg: #003300;
+    --btn-ride-color: #00ff00;
+    --btn-exit-bg: #1a0000;
+    --btn-exit-color: #ff4400;
+    --btn-text: #00aa00;
+    --lamp-kaiso: #ff4400;
+    --lamp-musha: #ffaa00;
+    --header-bg: #001200;
+  }
+
+  /* ===== LAYOUT ===== */
+  #app {
+    width: 100%;
+    max-width: 420px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== HEADER ===== */
+  #header {
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--panel-border);
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  #logo {
+    font-size: 20px;
+    font-weight: 900;
+    color: #F5C518;
+    letter-spacing: 2px;
+  }
+  #logo span { color: #fff; font-size: 11px; font-weight: 400; margin-left: 6px; letter-spacing: 0; }
+
+  #header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #theme-btn {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    color: var(--label-color);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+  }
+
+  /* ===== LAMPS ===== */
+  #lamps {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--panel-bg);
+    border-bottom: 1px solid var(--panel-border);
+    flex-shrink: 0;
+  }
+  .lamp {
+    flex: 1;
+    text-align: center;
+    padding: 6px 4px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border: 1px solid #333;
+    opacity: 0.3;
+    transition: opacity 0.2s, background 0.2s;
+    cursor: default;
+  }
+  .lamp.active { opacity: 1; }
+  #lamp-kusha { background: #1a4a00; color: #00ff41; border-color: #00aa00; }
+  #lamp-kusha.active { background: #2a7a00; box-shadow: 0 0 8px #00ff4155; }
+  #lamp-kaiso { background: #3a0000; color: var(--lamp-kaiso); border-color: #aa0000; }
+  #lamp-kaiso.active { background: #660000; box-shadow: 0 0 8px #ff000055; }
+  #lamp-musha { background: #2a1a00; color: var(--lamp-musha); border-color: #aa6600; }
+  #lamp-musha.active { background: #4a3000; box-shadow: 0 0 8px #ffaa0055; }
+  #lamp-yakan { background: #001a2a; color: #4fc3f7; border-color: #0066aa; }
+  #lamp-yakan.active { background: #003355; box-shadow: 0 0 8px #4fc3f755; }
+
+  /* ===== MAIN DISPLAY ===== */
+  #main-display {
+    background: var(--display-bg);
+    border: 1px solid var(--panel-border);
+    margin: 10px 12px;
+    border-radius: 8px;
+    padding: 12px;
+    flex-shrink: 0;
+  }
+
+  /* fare */
+  #fare-area {
+    background: var(--display-fare-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 6px;
+    padding: 8px 12px 6px;
+    margin-bottom: 10px;
+    text-align: right;
+  }
+  #fare-label {
+    font-size: 10px;
+    color: var(--label-color);
+    letter-spacing: 2px;
+    margin-bottom: 2px;
+    text-align: left;
+  }
+  #fare-display {
+    font-size: 52px;
+    font-weight: 900;
+    color: var(--fare-color);
+    letter-spacing: 2px;
+    line-height: 1;
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 10px currentColor;
+    word-break: break-all;
+    min-height: 56px;
+  }
+  #fare-unit {
+    font-size: 13px;
+    color: var(--label-color);
+    margin-left: 4px;
+  }
+
+  /* sub displays */
+  #sub-displays {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .sub-panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 5px;
+    padding: 6px 8px;
+    text-align: center;
+  }
+  .sub-label {
+    font-size: 9px;
+    color: var(--label-color);
+    letter-spacing: 1px;
+    margin-bottom: 3px;
+  }
+  .sub-value {
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--dist-color);
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 6px currentColor;
+    word-break: break-all;
+    line-height: 1.2;
+  }
+  .sub-unit {
+    font-size: 9px;
+    color: var(--label-color);
+  }
+
+  /* ===== REGION SELECTOR ===== */
+  #region-area {
+    padding: 0 12px 8px;
+    flex-shrink: 0;
+  }
+  #region-label {
+    font-size: 9px;
+    color: var(--label-color);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+  #region-btns {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .region-btn {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    color: var(--label-color);
+    padding: 8px 4px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+  }
+  .region-btn.active {
+    border-color: var(--fare-color);
+    color: var(--fare-color);
+    background: color-mix(in srgb, var(--fare-color) 10%, transparent);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--fare-color) 30%, transparent);
+  }
+  .region-btn .flag { font-size: 14px; display: block; margin-bottom: 2px; }
+
+  /* ===== OPTIONS ===== */
+  #options-area {
+    padding: 0 12px 8px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .toggle-label { font-size: 11px; color: var(--label-color); }
+  .toggle {
+    width: 36px;
+    height: 20px;
+    background: #333;
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.2s;
+  }
+  .toggle.on { background: var(--btn-ride-bg); }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* kaiso toggle */
+  #kaiso-wrap { margin-left: auto; }
+  #kaiso-btn {
+    background: #1a0000;
+    border: 1px solid #660000;
+    color: #ff4444;
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+  #kaiso-btn.active {
+    background: #440000;
+    border-color: #ff0000;
+    box-shadow: 0 0 8px #ff000044;
+  }
+
+  /* ===== CONTROL BUTTONS ===== */
+  #control-area {
+    padding: 0 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .ctrl-btn {
+    padding: 18px 12px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.1s;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+  .ctrl-btn:active { transform: scale(0.96); }
+  .ctrl-btn .btn-sub { font-size: 9px; font-weight: 400; letter-spacing: 1px; opacity: 0.7; }
+  #btn-ride {
+    background: var(--btn-ride-bg);
+    color: var(--btn-ride-color);
+    border: 1px solid color-mix(in srgb, var(--btn-ride-color) 30%, transparent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--btn-ride-color) 20%, transparent);
+  }
+  #btn-ride:disabled { opacity: 0.3; cursor: not-allowed; }
+  #btn-exit {
+    background: var(--btn-exit-bg);
+    color: var(--btn-exit-color);
+    border: 1px solid color-mix(in srgb, var(--btn-exit-color) 30%, transparent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--btn-exit-color) 20%, transparent);
+  }
+  #btn-exit:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ===== STATUS / GPS ===== */
+  #status-bar {
+    padding: 6px 12px;
+    font-size: 9px;
+    color: var(--label-color);
+    letter-spacing: 1px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  #gps-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #666;
+    margin-right: 4px;
+    vertical-align: middle;
+  }
+  #gps-dot.active { background: #00ff41; box-shadow: 0 0 4px #00ff41; animation: blink 1s infinite; }
+  #gps-dot.error { background: #ff4444; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ===== RESULT OVERLAY ===== */
+  #result-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  #result-overlay.show { display: flex; }
+  #result-card {
+    background: var(--panel-bg);
+    border: 2px solid var(--fare-color);
+    border-radius: 12px;
+    padding: 32px 40px;
+    text-align: center;
+    width: 300px;
+    box-shadow: 0 0 40px color-mix(in srgb, var(--fare-color) 30%, transparent);
+  }
+  #result-label {
+    font-size: 11px;
+    color: var(--label-color);
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+  #result-fare {
+    font-size: 56px;
+    font-weight: 900;
+    color: var(--fare-color);
+    font-family: 'Courier New', monospace;
+    text-shadow: 0 0 20px currentColor;
+    word-break: break-all;
+    line-height: 1.1;
+  }
+  #result-unit { font-size: 16px; color: var(--label-color); }
+  #result-details {
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--label-color);
+    line-height: 1.8;
+    letter-spacing: 0.5px;
+  }
+  #result-close {
+    margin-top: 20px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    color: var(--label-color);
+    padding: 10px 28px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 2px;
+  }
+
+  /* ===== BINARY MATRIX BG ===== */
+  body.theme-binary::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,20,0,0.3) 2px,
+      rgba(0,20,0,0.3) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+  body.theme-binary #app { position: relative; z-index: 1; }
+
+  /* LCD scanline effect */
+  body.theme-lcd #main-display::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,0,0,0.15) 3px,
+      rgba(0,0,0,0.15) 4px
+    );
+    pointer-events: none;
+    border-radius: 8px;
+  }
+  body.theme-lcd #main-display { position: relative; overflow: hidden; }
+
+  #kaiso-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+  }
+  #kaiso-overlay.show { display: flex; }
+  #kaiso-sign {
+    background: #cc0000;
+    color: #fff;
+    font-size: 48px;
+    font-weight: 900;
+    padding: 30px 60px;
+    border-radius: 8px;
+    letter-spacing: 8px;
+    border: 4px solid #ff4444;
+    box-shadow: 0 0 40px #ff000088;
+    animation: kaisoPulse 1.5s infinite;
+  }
+  @keyframes kaisoPulse {
+    0%,100%{box-shadow:0 0 40px #ff000088}
+    50%{box-shadow:0 0 80px #ff0000cc}
+  }
+</style>
+</head>
+<body class="theme-lcd">
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div id="logo">FAXI<span>METER β</span></div>
+    <div id="header-right">
+      <button id="theme-btn" onclick="cycleTheme()">LCD</button>
+    </div>
+  </div>
+
+  <!-- LAMPS -->
+  <div id="lamps">
+    <div class="lamp active" id="lamp-kusha">空車</div>
+    <div class="lamp" id="lamp-kaiso">回送</div>
+    <div class="lamp" id="lamp-musha">賃走</div>
+    <div class="lamp" id="lamp-yakan">深夜</div>
+  </div>
+
+  <!-- MAIN DISPLAY -->
+  <div id="main-display">
+    <div id="fare-area">
+      <div id="fare-label">FARE</div>
+      <div id="fare-display"><span id="fare-num">0</span><span id="fare-unit"> 円</span></div>
+    </div>
+    <div id="sub-displays">
+      <div class="sub-panel">
+        <div class="sub-label">DIST</div>
+        <div class="sub-value" id="dist-display">0.00</div>
+        <div class="sub-unit" id="dist-unit">km</div>
+      </div>
+      <div class="sub-panel">
+        <div class="sub-label">TIME</div>
+        <div class="sub-value" id="time-display">00:00</div>
+        <div class="sub-unit">m:s</div>
+      </div>
+      <div class="sub-panel">
+        <div class="sub-label">SPEED</div>
+        <div class="sub-value" id="speed-display">0</div>
+        <div class="sub-unit" id="speed-unit">km/h</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGION SELECTOR -->
+  <div id="region-area">
+    <div id="region-label">REGION</div>
+    <div id="region-btns">
+      <button class="region-btn active" data-region="hiroshima" onclick="setRegion(this)">
+        <span class="flag">🚕</span>広島
+      </button>
+      <button class="region-btn" data-region="tokyo" onclick="setRegion(this)">
+        <span class="flag">🗼</span>東京
+      </button>
+      <button class="region-btn" data-region="kyoto" onclick="setRegion(this)">
+        <span class="flag">⛩️</span>京都
+      </button>
+      <button class="region-btn" data-region="newyork" onclick="setRegion(this)">
+        <span class="flag">🗽</span>N.Y.
+      </button>
+    </div>
+  </div>
+
+  <!-- OPTIONS -->
+  <div id="options-area">
+    <div class="toggle-wrap" onclick="toggleMusha()">
+      <div class="toggle-label">迎車</div>
+      <div class="toggle" id="musha-toggle"></div>
+    </div>
+    <button id="kaiso-btn" onclick="toggleKaiso()">回　送</button>
+  </div>
+
+  <!-- CONTROL BUTTONS -->
+  <div id="control-area">
+    <button class="ctrl-btn" id="btn-ride" onclick="startRide()">
+      乗　車
+      <span class="btn-sub">START</span>
+    </button>
+    <button class="ctrl-btn" id="btn-exit" onclick="stopRide()" disabled>
+      降　車
+      <span class="btn-sub">STOP</span>
+    </button>
+  </div>
+
+  <!-- STATUS -->
+  <div id="status-bar">
+    <span id="gps-dot"></span>
+    <span id="status-text">GPS待機中...</span>
+  </div>
+
+</div><!-- /app -->
+
+<!-- 回送オーバーレイ -->
+<div id="kaiso-overlay">
+  <div id="kaiso-sign">回　送</div>
+</div>
+
+<!-- 結果オーバーレイ -->
+<div id="result-overlay">
+  <div id="result-card">
+    <div id="result-label">ありがとうございました</div>
+    <div id="result-fare"><span id="result-num">0</span><span id="result-unit"> 円</span></div>
+    <div id="result-details"></div>
+    <button id="result-close" onclick="closeResult()">CLOSE</button>
+  </div>
+</div>
+
+<script>
+// ===== REGION CONFIG =====
+const REGIONS = {
+  hiroshima: {
+    name: '広島',
+    currency: '円',
+    baseFare: 650,
+    baseDist: 1200,      // 初乗り距離(m)
+    addFare: 100,
+    addDist: 266,        // 加算距離(m)
+    timeAdd: 100,        // 時間加算額
+    timeSec: 95,         // 時間加算秒数（低速時）
+    nightMult: 1.2,
+    pickupFare: 200,
+    speedThreshold: 10,  // km/h以下で時間メーター
+    symbol: '¥',
+    isForeign: false,
+  },
+  tokyo: {
+    name: '東京',
+    currency: '円',
+    baseFare: 500,
+    baseDist: 1096,
+    addFare: 100,
+    addDist: 233,
+    timeAdd: 100,
+    timeSec: 90,
+    nightMult: 1.2,
+    pickupFare: 420,
+    speedThreshold: 10,
+    symbol: '¥',
+    isForeign: false,
+  },
+  kyoto: {
+    name: '京都',
+    currency: '円',
+    baseFare: 680,
+    baseDist: 1200,
+    addFare: 100,
+    addDist: 240,
+    timeAdd: 100,
+    timeSec: 88,
+    nightMult: 1.2,
+    pickupFare: 300,
+    speedThreshold: 10,
+    symbol: '¥',
+    isForeign: false,
+  },
+  newyork: {
+    name: 'N.Y.',
+    currency: '$',
+    baseFare: 3.00,
+    baseDist: 321,       // 1/5マイル = 321m
+    addFare: 0.70,
+    addDist: 321,
+    timeAdd: 0.70,
+    timeSec: 60,
+    nightMult: 1.5,
+    pickupFare: 2.50,
+    speedThreshold: 12,
+    symbol: '$',
+    isForeign: true,
+    decimals: 2,
+  }
+};
+
+// ===== STATE =====
+let currentRegion = 'hiroshima';
+let currentTheme = 'lcd';
+let themes = ['lcd', 'modern', 'binary'];
+let themeNames = ['LCD', 'MODERN', 'BIN'];
+let isRiding = false;
+let isKaiso = false;
+let isMusha = false;
+let isNight = false;
+
+let fare = 0;
+let distanceM = 0;
+let elapsedSec = 0;
+let rideInterval = null;
+let gpsWatcher = null;
+let lastPos = null;
+let currentSpeed = 0;
+let timeAddAccum = 0;   // 時間加算の蓄積秒数
+
+// ===== THEME =====
+function cycleTheme() {
+  let idx = themes.indexOf(currentTheme);
+  idx = (idx + 1) % themes.length;
+  currentTheme = themes[idx];
+  document.body.className = 'theme-' + currentTheme;
+  document.getElementById('theme-btn').textContent = themeNames[idx];
+  updateDisplays();
+}
+
+// ===== REGION =====
+function setRegion(btn) {
+  if (isRiding) return;
+  document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentRegion = btn.dataset.region;
+  const r = REGIONS[currentRegion];
+  document.getElementById('fare-unit').textContent = ' ' + r.currency;
+  document.getElementById('result-unit').textContent = ' ' + r.currency;
+  updateNightCheck();
+  updateDisplays();
+}
+
+// ===== NIGHT CHECK =====
+function updateNightCheck() {
+  const h = new Date().getHours();
+  isNight = (h >= 22 || h < 5);
+  const lamp = document.getElementById('lamp-yakan');
+  lamp.classList.toggle('active', isNight);
+}
+
+// ===== KAISO =====
+function toggleKaiso() {
+  if (isRiding) return;
+  isKaiso = !isKaiso;
+  document.getElementById('kaiso-btn').classList.toggle('active', isKaiso);
+  document.getElementById('kaiso-overlay').classList.toggle('show', isKaiso);
+  document.getElementById('lamp-kaiso').classList.toggle('active', isKaiso);
+  document.getElementById('lamp-kusha').classList.toggle('active', !isKaiso);
+}
+
+// ===== MUSHA (迎車) =====
+function toggleMusha() {
+  if (isRiding) return;
+  isMusha = !isMusha;
+  document.getElementById('musha-toggle').classList.toggle('on', isMusha);
+}
+
+// ===== FORMAT =====
+function toBinary(n) {
+  return Math.floor(n).toString(2);
+}
+
+function formatFare(val) {
+  const r = REGIONS[currentRegion];
+  if (currentTheme === 'binary') {
+    return toBinary(Math.round(val));
+  }
+  if (r.isForeign) {
+    return val.toFixed(r.decimals || 2);
+  }
+  return Math.floor(val).toLocaleString();
+}
+
+function formatDist(km) {
+  if (currentTheme === 'binary') {
+    return toBinary(Math.round(km * 1000));
+  }
+  return km.toFixed(2);
+}
+
+function formatTime(sec) {
+  if (currentTheme === 'binary') {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return toBinary(m) + ':' + toBinary(s);
+  }
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+
+function formatSpeed(kmh) {
+  if (currentTheme === 'binary') return toBinary(Math.round(kmh));
+  return Math.round(kmh);
+}
+
+function updateDisplays() {
+  const r = REGIONS[currentRegion];
+  document.getElementById('fare-num').textContent = formatFare(fare);
+  document.getElementById('dist-display').textContent = formatDist(distanceM / 1000);
+  document.getElementById('time-display').textContent = formatTime(elapsedSec);
+  document.getElementById('speed-display').textContent = formatSpeed(currentSpeed);
+
+  // binary theme: units change
+  if (currentTheme === 'binary') {
+    document.getElementById('dist-unit').textContent = 'bin.m';
+    document.getElementById('speed-unit').textContent = 'b.km/h';
+  } else {
+    document.getElementById('dist-unit').textContent = 'km';
+    document.getElementById('speed-unit').textContent = 'km/h';
+  }
+}
+
+// ===== GPS =====
+function startGPS() {
+  if (!navigator.geolocation) {
+    setStatus('GPS非対応', 'error');
+    return;
+  }
+  setStatus('GPS取得中...', 'waiting');
+  gpsWatcher = navigator.geolocation.watchPosition(
+    onGPS,
+    onGPSError,
+    { enableHighAccuracy: true, maximumAge: 1000 }
+  );
+}
+
+function stopGPS() {
+  if (gpsWatcher !== null) {
+    navigator.geolocation.clearWatch(gpsWatcher);
+    gpsWatcher = null;
+  }
+  lastPos = null;
+}
+
+function onGPS(pos) {
+  const dot = document.getElementById('gps-dot');
+  dot.className = 'active';
+  setStatus('GPS受信中 ±' + Math.round(pos.coords.accuracy) + 'm', 'ok');
+
+  // speed
+  if (pos.coords.speed !== null) {
+    currentSpeed = pos.coords.speed * 3.6;
+  }
+
+  if (!isRiding) { lastPos = pos; return; }
+
+  if (lastPos) {
+    const d = haversine(
+      lastPos.coords.latitude, lastPos.coords.longitude,
+      pos.coords.latitude, pos.coords.longitude
+    );
+    distanceM += d;
+    updateFareFromDistance();
+  }
+  lastPos = pos;
+  updateDisplays();
+}
+
+function onGPSError(e) {
+  document.getElementById('gps-dot').className = 'error';
+  setStatus('GPS失敗: シミュレーション中', 'error');
+  // GPSなしの場合はシミュレーション（デモ用）
+  if (!isRiding) return;
+  // 速度30km/hと仮定して距離加算
+}
+
+function setStatus(msg, type) {
+  document.getElementById('status-text').textContent = msg;
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ===== FARE CALCULATION =====
+function calcFare(distM, sec, withPickup) {
+  const r = REGIONS[currentRegion];
+  const mult = isNight ? r.nightMult : 1.0;
+
+  let f = r.baseFare;
+  const addM = Math.max(0, distM - r.baseDist);
+  const addCount = Math.ceil(addM / r.addDist);
+  f += addCount * r.addFare;
+
+  // 時間加算分はリアルタイムで tickから加算
+  if (withPickup && isMusha) f += r.pickupFare;
+
+  return f * mult;
+}
+
+function updateFareFromDistance() {
+  const r = REGIONS[currentRegion];
+  const mult = isNight ? r.nightMult : 1.0;
+  let f = r.baseFare;
+  if (isMusha) f += r.pickupFare;
+  const addM = Math.max(0, distanceM - r.baseDist);
+  const addCount = Math.floor(addM / r.addDist);
+  f += addCount * r.addFare;
+  f *= mult;
+  // 時間加算分を足す
+  f += timeAddAccum;
+  fare = f;
+}
+
+// ===== RIDE =====
+function startRide() {
+  if (isKaiso) { toggleKaiso(); }
+  isRiding = true;
+  fare = REGIONS[currentRegion].baseFare * (isNight ? REGIONS[currentRegion].nightMult : 1);
+  if (isMusha) fare += REGIONS[currentRegion].pickupFare;
+  distanceM = 0;
+  elapsedSec = 0;
+  timeAddAccum = 0;
+  currentSpeed = 0;
+
+  document.getElementById('btn-ride').disabled = true;
+  document.getElementById('btn-exit').disabled = false;
+  document.querySelectorAll('.region-btn').forEach(b => b.style.pointerEvents = 'none');
+  document.getElementById('kaiso-btn').style.pointerEvents = 'none';
+  document.getElementById('musha-toggle').parentElement.style.pointerEvents = 'none';
+
+  // lamps
+  document.getElementById('lamp-kusha').classList.remove('active');
+  document.getElementById('lamp-musha').classList.add('active');
+
+  updateNightCheck();
+  startGPS();
+
+  // tick every second
+  rideInterval = setInterval(() => {
+    elapsedSec++;
+    const r = REGIONS[currentRegion];
+
+    // 時間距離併用（低速・停車時）
+    if (currentSpeed <= r.speedThreshold) {
+      timeAddAccum += r.timeAdd / r.timeSec; // 1秒あたりの加算
+    }
+
+    // GPS失敗時のシミュレーション（30km/h想定）
+    const dot = document.getElementById('gps-dot');
+    if (dot.className === 'error' || dot.className === '') {
+      const simDist = (30 / 3600) * 1000; // 1秒に進む距離(m)
+      distanceM += simDist;
+      currentSpeed = 30;
+    }
+
+    updateFareFromDistance();
+    updateDisplays();
+  }, 1000);
+}
+
+function stopRide() {
+  if (!isRiding) return;
+  isRiding = false;
+  clearInterval(rideInterval);
+  stopGPS();
+
+  // 料金確定
+  const finalFare = fare;
+  const finalDist = distanceM;
+  const finalSec = elapsedSec;
+  const r = REGIONS[currentRegion];
+
+  // チーン！
+  playBell();
+
+  // 結果表示
+  setTimeout(() => showResult(finalFare, finalDist, finalSec, r), 300);
+
+  document.getElementById('btn-ride').disabled = false;
+  document.getElementById('btn-exit').disabled = true;
+  document.querySelectorAll('.region-btn').forEach(b => b.style.pointerEvents = '');
+  document.getElementById('kaiso-btn').style.pointerEvents = '';
+  document.getElementById('musha-toggle').parentElement.style.pointerEvents = '';
+
+  // lamps
+  document.getElementById('lamp-musha').classList.remove('active');
+  document.getElementById('lamp-kusha').classList.add('active');
+
+  // reset displays
+  fare = 0; distanceM = 0; elapsedSec = 0; timeAddAccum = 0; currentSpeed = 0;
+  updateDisplays();
+}
+
+// ===== BELL SOUND =====
+function playBell() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    const playTone = (freq, startTime, duration, gain) => {
+      const osc = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      osc.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+      gainNode.gain.setValueAtTime(gain, startTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+
+    const now = ctx.currentTime;
+    // チーン：倍音構成でリアルなベル音
+    playTone(1318.5, now, 1.5, 0.4);       // E6
+    playTone(2637.0, now, 1.0, 0.2);       // E7
+    playTone(1975.5, now + 0.05, 1.2, 0.15); // B6
+    // 二打目
+    playTone(1318.5, now + 0.5, 1.2, 0.3);
+    playTone(1661.2, now + 0.55, 0.9, 0.12);
+
+    if (currentTheme === 'binary') {
+      // バイナリモードはエラー音追加
+      setTimeout(() => {
+        const osc2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        osc2.connect(g2); g2.connect(ctx.destination);
+        osc2.type = 'sawtooth';
+        osc2.frequency.value = 80;
+        g2.gain.setValueAtTime(0.1, ctx.currentTime);
+        g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc2.start(); osc2.stop(ctx.currentTime + 0.3);
+      }, 800);
+    }
+  } catch(e) {}
+}
+
+// ===== RESULT =====
+function showResult(f, dist, sec, r) {
+  const isBin = currentTheme === 'binary';
+
+  let fareStr;
+  if (isBin) {
+    fareStr = toBinary(Math.round(f));
+  } else if (r.isForeign) {
+    fareStr = f.toFixed(2);
+  } else {
+    fareStr = Math.floor(f).toLocaleString();
+  }
+
+  document.getElementById('result-num').textContent = fareStr;
+  document.getElementById('result-unit').textContent = ' ' + r.currency;
+
+  const distStr = isBin ? toBinary(Math.round(dist)) + ' bin.m' : (dist/1000).toFixed(2) + ' km';
+  const timeStr = formatTime(sec);
+  const nightStr = isNight ? '深夜割増 ×' + r.nightMult : '通常料金';
+  const mushaStr = isMusha ? '迎車料金 +' + (r.isForeign ? r.pickupFare.toFixed(2) : r.pickupFare) + r.currency : '';
+
+  let details = `走行距離：${distStr}\n乗車時間：${timeStr}\n${nightStr}`;
+  if (mushaStr) details += '\n' + mushaStr;
+  if (isBin) details += '\n\n⚠ ERROR: FARE OVERFLOW?';
+
+  document.getElementById('result-details').style.whiteSpace = 'pre-line';
+  document.getElementById('result-details').textContent = details;
+  document.getElementById('result-overlay').classList.add('show');
+}
+
+function closeResult() {
+  document.getElementById('result-overlay').classList.remove('show');
+}
+
+// ===== INIT =====
+updateNightCheck();
+updateDisplays();
+setInterval(updateNightCheck, 60000);
+
+// GPS起動（乗車前も位置取得しておく）
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      lastPos = pos;
+      document.getElementById('gps-dot').className = 'active';
+      setStatus('GPS受信OK ±' + Math.round(pos.coords.accuracy) + 'm', 'ok');
+    },
+    () => {
+      document.getElementById('gps-dot').className = 'error';
+      setStatus('GPS失敗 — シミュレーションモード', 'error');
+    },
+    { enableHighAccuracy: true }
+  );
+}
+
+// PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
+</body>
+</html>
