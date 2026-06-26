@@ -482,6 +482,59 @@
   }
   body.theme-lcd #main-display { position: relative; overflow: hidden; }
 
+  /* ===== LANDSCAPE ===== */
+  @media (orientation: landscape) {
+    #app {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: stretch;
+      max-width: 100%;
+      overflow-y: auto;
+    }
+    #header {
+      width: 100%;
+      flex-shrink: 0;
+    }
+    #lamps {
+      width: 100%;
+      flex-shrink: 0;
+    }
+    /* 左カラム：メインディスプレイ */
+    #main-display {
+      flex: 1 1 55%;
+      margin: 8px 6px 8px 12px;
+      min-width: 0;
+    }
+    #fare-display {
+      font-size: 56px;
+      min-height: 60px;
+    }
+    /* 右カラム：操作系 */
+    #right-col {
+      flex: 1 1 40%;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin: 8px 12px 8px 6px;
+      min-width: 0;
+    }
+    #region-area {
+      padding: 0 0 6px;
+    }
+    #options-area {
+      padding: 0 0 6px;
+    }
+    #control-area {
+      padding: 0;
+    }
+    .ctrl-btn {
+      padding: 12px 8px;
+    }
+    #status-bar {
+      width: 100%;
+    }
+  }
+
   #kaiso-overlay {
     display: none;
     position: fixed;
@@ -554,6 +607,8 @@
     </div>
   </div>
 
+  <!-- 右カラム（横画面時に操作系をまとめる） -->
+  <div id="right-col">
   <!-- REGION SELECTOR -->
   <div id="region-area">
     <div id="region-label">REGION</div>
@@ -594,6 +649,8 @@
     </button>
   </div>
 
+  </div><!-- /right-col -->
+
   <!-- STATUS -->
   <div id="status-bar">
     <span id="gps-dot"></span>
@@ -618,6 +675,24 @@
 </div>
 
 <script>
+// ===== WAKE LOCK =====
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+    } catch(e) {}
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release();
+    wakeLock = null;
+  }
+}
+
 // ===== REGION CONFIG =====
 const REGIONS = {
   hiroshima: {
@@ -928,6 +1003,7 @@ function startRide() {
 
   updateNightCheck();
   startGPS();
+  requestWakeLock();
 
   // tick every second
   rideInterval = setInterval(() => {
@@ -957,6 +1033,7 @@ function stopRide() {
   isRiding = false;
   clearInterval(rideInterval);
   stopGPS();
+  releaseWakeLock();
 
   // 料金確定
   const finalFare = fare;
