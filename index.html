@@ -188,15 +188,15 @@
     text-align: left;
   }
   #fare-display {
-    font-size: 52px;
+    font-size: 76px;
     font-weight: 900;
     color: var(--fare-color);
     letter-spacing: 2px;
     line-height: 1;
     font-family: 'Courier New', monospace;
-    text-shadow: 0 0 10px currentColor;
+    text-shadow: 0 0 14px currentColor;
     word-break: break-all;
-    min-height: 56px;
+    min-height: 80px;
   }
   #fare-unit {
     font-size: 13px;
@@ -893,13 +893,16 @@ function updateFareFromDistance() {
   const mult = isNight ? r.nightMult : 1.0;
   let f = r.baseFare;
   if (isMusha) f += r.pickupFare;
+  // 初乗り距離を超えた分だけ加算
   const addM = Math.max(0, distanceM - r.baseDist);
   const addCount = Math.floor(addM / r.addDist);
   f += addCount * r.addFare;
   f *= mult;
-  // 時間加算分を足す
-  f += timeAddAccum;
-  fare = f;
+  // 時間加算分（初乗り超えてから蓄積したもの）を足す
+  f += timeAddAccum * mult;
+  // 10円単位に丸める（NYはセント単位なのでそのまま）
+  const r2 = REGIONS[currentRegion];
+  fare = r2.isForeign ? Math.round(f * 100) / 100 : Math.floor(f / 10) * 10;
 }
 
 // ===== RIDE =====
@@ -931,9 +934,9 @@ function startRide() {
     elapsedSec++;
     const r = REGIONS[currentRegion];
 
-    // 時間距離併用（低速・停車時）
-    if (currentSpeed <= r.speedThreshold) {
-      timeAddAccum += r.timeAdd / r.timeSec; // 1秒あたりの加算
+    // 時間距離併用（初乗り距離超えてから、かつ低速・停車時のみ）
+    if (distanceM > r.baseDist && currentSpeed <= r.speedThreshold) {
+      timeAddAccum += r.timeAdd / r.timeSec;
     }
 
     // GPS失敗時のシミュレーション（30km/h想定）
