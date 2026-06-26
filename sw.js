@@ -1,4 +1,4 @@
-const CACHE_NAME = 'faxi-meter-v1';
+const CACHE_NAME = 'faxi-meter-v2';
 const ASSETS = [
   './',
   './index.html',
